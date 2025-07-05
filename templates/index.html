@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Milla Moochille 🐮💜</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 30px;
+        }
+        .chatbox {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background: #292950;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 0 20px #a64ac9;
+        }
+        .bubble {
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 16px;
+            max-width: 80%;
+        }
+        .user { background-color: #4e4eaa; align-self: flex-end; text-align: right; }
+        .milla { background-color: #a64ac9; align-self: flex-start; text-align: left; }
+        .bubbles { display: flex; flex-direction: column; }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #ff69b4;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbox">
+        <h2>Milla Moochille 💬</h2>
+        <div class="bubbles" id="chat"></div>
+        <input type="text" id="userInput" placeholder="Ketik sesuatu..." autofocus>
+        <button onclick="sendMessage()">Kirim</button>
+    </div>
+
+    <script>
+        function addBubble(text, sender) {
+            const chat = document.getElementById("chat");
+            const bubble = document.createElement("div");
+            bubble.classList.add("bubble", sender);
+            bubble.innerText = text;
+            chat.appendChild(bubble);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById("userInput");
+            const message = input.value.trim();
+            if (!message) return;
+
+            addBubble("Kamu: " + message, "user");
+            input.value = "";
+
+            fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: message })
+            })
+            .then(res => res.json())
+            .then(data => {
+                addBubble("Milla: " + data.reply, "milla");
+
+                // Auto-play suara jika tersedia
+                const audio = new Audio("/static/milla_voice.mp3?" + new Date().getTime());
+                audio.play().catch(e => console.error("Gagal memutar suara:", e));
+            })
+            .catch(err => {
+                console.error(err);
+                addBubble("Milla: Moo~ Milla tidak bisa membalas 😢", "milla");
+            });
+        }
+    </script>
+</body>
+</html>
