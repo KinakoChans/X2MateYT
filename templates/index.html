@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube Downloader</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #121212;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden; /* ✅ mencegah scroll horizontal */
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      padding: 20px;
+    }
+
+    .intro {
+      max-width: 600px;
+      text-align: center;
+      margin-bottom: 30px;
+      line-height: 1.6;
+      color: #ccc;
+      user-select: none;
+      padding: 0 16px;
+    }
+
+    .intro h1 {
+      font-size: 24px;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 14px;
+      color: #888;
+      user-select: none;
+      padding: 20px 10px;
+    }
+
+    input.locked {
+      pointer-events: none;
+      user-select: none;
+      background-color: #333;
+      color: #aaa;
+      cursor: not-allowed;
+    }
+
+    label.disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .title, .btn-text, .progress-text, .alert-text, .back-btn {
+      user-select: none;
+    }
+
+    .title {
+      user-select: none;
+      pointer-events: none;
+    }
+
+    img.thumbnail {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    input[type="radio"] {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .format-label {
+      user-select: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-right: 10px;
+    }
+
+    .popup-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .popup-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .popup-content {
+      background: #1f1f1f;
+      color: #fff;
+      padding: 20px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 300px;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    }
+
+    .popup-content p {
+      font-size: 15px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .back-btn-container {
+      display: flex;
+      justify-content: center;
+    }
+
+    .back-btn {
+      background: #007bff;
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      pointer-events: auto;
+      user-select: none;
+    }
+
+    .center-button {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+
+    <!-- Penjelasan Profesional -->
+    <div class="intro">
+      <h1>🎧 YouTube MP3/MP4 Downloader</h1>
+      <p>Alat online ini memungkinkan kamu mengunduh video YouTube ke format MP3 atau MP4 secara gratis, cepat, dan berkualitas tinggi. Hanya dengan satu klik, kamu bisa menyimpan lagu favorit atau video penting langsung ke perangkatmu.</p>
+      <p>Maksimal durasi video adalah 3 jam. Semua proses berjalan otomatis dengan kompresi pintar agar ukuran tetap ringan dan suara tetap jernih.</p>
+    </div>
+
+    <!-- Kotak Downloader -->
+    <div class="container">
+      <div class="title">🎵 YouTube MP3/MP4 Downloader</div>
+
+      <img id="thumb" class="thumbnail" style="display:none" draggable="false" />
+      <div id="video-title" class="video-title"></div>
+      <input type="text" id="url" placeholder="Paste YouTube link here...">
+
+      <div class="options" id="format-options" style="display:none;">
+        <label class="format-label">
+          <input type="radio" name="format" value="mp3" checked> MP3
+        </label>
+        <label class="format-label">
+          <input type="radio" name="format" value="mp4"> MP4
+        </label>
+      </div>
+
+      <div class="center-button">
+        <button id="action-btn" onclick="fetchInfo()"><span class="btn-text">Fetch Info</span></button>
+      </div>
+
+      <div class="spinner" id="spinner" style="display: none;">
+        <span></span><span></span><span></span>
+      </div>
+
+      <div class="progress-container" style="display: none;">
+        <div class="progress-wrapper">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0%</div>
+      </div>
+    </div>
+
+    <!-- Popup Durasi -->
+    <div id="popup" class="popup-overlay">
+      <div class="popup-content">
+        <p class="alert-text">⚠️ Maaf, video terlalu panjang.<br>Aplikasi ini hanya mendukung video berdurasi maksimal <strong>3 jam (180 menit)</strong>.<br>Silakan coba dengan video lain ya 😊</p>
+        <div class="back-btn-container">
+          <button class="back-btn" onclick="closePopup()">Kembali</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer Developer -->
+  <footer class="footer">Developed with ❤️ by @KinakoChans</footer>
+
+  <!-- Script -->
+  <script>
+    let title = "";
+    const urlInput = document.getElementById('url');
+    const actionBtn = document.getElementById('action-btn');
+    const spinner = document.getElementById('spinner');
+    const formatOptions = document.getElementById('format-options');
+    const formatRadios = document.querySelectorAll('input[name="format"]');
+    const formatLabels = document.querySelectorAll('.format-label');
+    const popup = document.getElementById("popup");
+
+    function setButtonLoading(state) {
+      actionBtn.disabled = state;
+      spinner.style.display = state ? 'block' : 'none';
+    }
+
+    function sanitizeFilename(name) {
+      return name.replace(/[\\/:*?"<>|]/g, '').slice(0, 100);
+    }
+
+    function fetchInfo() {
+      const url = urlInput.value.trim();
+      if (!url) return alert("Masukkan URL YouTube terlebih dahulu.");
+      setButtonLoading(true);
+
+      urlInput.classList.add('locked');
+      urlInput.setAttribute('readonly', true);
+      urlInput.setAttribute('unselectable', 'on');
+      urlInput.style.userSelect = 'none';
+
+      fetch('/fetch-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          if (data.error.includes("Durasi video lebih dari 3 jam")) {
+            popup.classList.add("show");
+            return;
+          }
+          throw new Error(data.error);
+        }
+
+        document.getElementById('thumb').src = data.thumbnail;
+        document.getElementById('thumb').style.display = 'block';
+        document.getElementById('video-title').textContent = data.title;
+        title = data.title;
+
+        formatOptions.style.display = 'block';
+        actionBtn.innerHTML = '<span class="btn-text">Download</span>';
+        actionBtn.onclick = download;
+      })
+      .catch(err => {
+        alert("Gagal ambil info video: " + err.message);
+        urlInput.classList.remove('locked');
+        urlInput.removeAttribute('readonly');
+        urlInput.style.userSelect = 'auto';
+        urlInput.removeAttribute('unselectable');
+      })
+      .finally(() => setButtonLoading(false));
+    }
+
+    function closePopup() {
+      popup.classList.remove("show");
+      setTimeout(resetDownloader, 300);
+    }
+
+    function lockFormatOptions() {
+      formatRadios.forEach(r => r.disabled = true);
+      formatLabels.forEach(label => label.classList.add('disabled'));
+    }
+
+    function unlockFormatOptions() {
+      formatRadios.forEach(r => r.disabled = false);
+      formatLabels.forEach(label => label.classList.remove('disabled'));
+    }
+
+    function download() {
+      const url = urlInput.value.trim();
+      const format = document.querySelector('input[name="format"]:checked').value;
+      if (!url || !format) return;
+
+      document.querySelector('.progress-container').style.display = 'block';
+      setButtonLoading(true);
+      lockFormatOptions();
+
+      fetch('/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, format })
+      });
+
+      const interval = setInterval(() => {
+        fetch('/progress')
+          .then(res => res.json())
+          .then(data => {
+            document.getElementById('progress-bar').style.width = data.progress + '%';
+            document.getElementById('progress-text').textContent = data.progress + '%';
+            if (data.progress >= 100) {
+              clearInterval(interval);
+              tryFetchFile(format);
+            }
+          });
+      }, 300);
+    }
+
+    function tryFetchFile(format, attempt = 0) {
+      if (attempt > 10) {
+        alert("Download gagal: File tidak ditemukan.");
+        setButtonLoading(false);
+        return;
+      }
+
+      fetch('/file')
+        .then(resp => {
+          if (!resp.ok) {
+            return resp.text().then(text => {
+              if (text.includes("File tidak ditemukan")) {
+                setTimeout(() => tryFetchFile(format, attempt + 1), 500);
+              } else {
+                throw new Error(text || "Gagal ambil file");
+              }
+            });
+          }
+          return resp.blob();
+        })
+        .then(blob => {
+          if (!blob) return;
+          const link = document.createElement('a');
+          link.href = window.URL.createObjectURL(blob);
+          const safeTitle = sanitizeFilename(title || 'download');
+          link.download = `${safeTitle}.${format}`;
+          link.click();
+
+          actionBtn.innerHTML = '<span class="btn-text">Next</span>';
+          actionBtn.onclick = resetDownloader;
+          setButtonLoading(false);
+        })
+        .catch(err => {
+          alert("Download gagal: " + err.message);
+          setButtonLoading(false);
+        });
+    }
+
+    function resetDownloader() {
+      popup.classList.remove("show");
+      setTimeout(() => {
+        document.getElementById('thumb').style.display = 'none';
+        document.getElementById('video-title').textContent = '';
+        urlInput.value = '';
+        urlInput.classList.remove('locked');
+        urlInput.removeAttribute('readonly');
+        urlInput.removeAttribute('unselectable');
+        urlInput.style.userSelect = 'auto';
+
+        unlockFormatOptions();
+        formatOptions.style.display = 'none';
+
+        document.querySelector('.progress-container').style.display = 'none';
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-text').textContent = '0%';
+        actionBtn.innerHTML = '<span class="btn-text">Fetch Info</span>';
+        actionBtn.onclick = fetchInfo;
+        setButtonLoading(false);
+      }, 200);
+    }
+  </script>
+</body>
+</html>
