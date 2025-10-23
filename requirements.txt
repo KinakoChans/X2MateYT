@@ -1,0 +1,7 @@
+flask
+yt-dlp
+ffmpeg-python
+mutagen
+ffmpeg
+requests
+pytz
